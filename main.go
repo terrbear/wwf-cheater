@@ -113,6 +113,12 @@ func (dict *DictNode) getCandidates(letters []string) []string {
 	}
 
 	for idx, letter := range letters {
+		if letter == "_" {
+			for _, child := range dict.Children {
+				candidates = append(candidates, child.getCandidates(splice(letters, idx))...)
+			}
+		}
+
 		node, ok := dict.Children[letter]
 		if ok {
 			// node.printVisit()
@@ -201,7 +207,7 @@ func main() {
 
 	letters := os.Args[len(os.Args)-1]
 
-	splitLetters := strings.Split(letters, "")
+	splitLetters := strings.Split(letters+suffix+prefix, "")
 	sort.SliceStable(splitLetters, func(i, j int) bool {
 		return splitLetters[i] < splitLetters[j]
 	})
