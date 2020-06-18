@@ -31,9 +31,9 @@ func buildDB() DictNode {
 		currentNode = &root
 
 		letters := strings.Split(word, "")
-		sort.SliceStable(letters, func(i, j int) bool {
+		/*sort.SliceStable(letters, func(i, j int) bool {
 			return letters[i] < letters[j]
-		})
+		})*/
 
 		for _, letter := range letters {
 			if currentNode.Children == nil {
@@ -121,7 +121,7 @@ func (dict *DictNode) getCandidates(letters []string) []string {
 
 		node, ok := dict.Children[letter]
 		if ok {
-			// node.printVisit()
+			//node.printVisit()
 			//fmt.Println("splitting letters: ", letters[:idx], letters[idx+1:], idx)
 			candidates = append(candidates, node.getCandidates(splice(letters, idx))...)
 		}
