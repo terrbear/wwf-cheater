@@ -246,9 +246,9 @@ func nav() {
 
 func shell() {
 	reader := bufio.NewReader(os.Stdin)
-	db := loadDB()
 	fmt.Println("WWF Shell for Champs")
 	letters := ""
+	db := loadDB()
 
 	for {
 		lookups = 0
@@ -268,9 +268,9 @@ func shell() {
 		splitLetters := strings.Split(letters+strings.ReplaceAll(filter, "-", ""), "")
 
 		//fmt.Println("splitLetters: ", splitLetters)
-		sort.SliceStable(splitLetters, func(i, j int) bool {
+		/*sort.SliceStable(splitLetters, func(i, j int) bool {
 			return splitLetters[i] < splitLetters[j]
-		})
+		})*/
 
 		candidates := sortForWWF(uniq(db.getCandidates(splitLetters)))
 		// candidates = applyFlags(candidates)
