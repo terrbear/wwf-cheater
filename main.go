@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/gob"
 	"encoding/json"
@@ -18,6 +19,8 @@ var suffix string
 var length int
 var initializeDB bool
 
+var lookups int = 0
+
 func buildDB() DictNode {
 	file, _ := ioutil.ReadFile("words.json")
 	var result map[string]interface{}
@@ -31,13 +34,16 @@ func buildDB() DictNode {
 		currentNode = &root
 
 		letters := strings.Split(word, "")
-		/*sort.SliceStable(letters, func(i, j int) bool {
+		sort.SliceStable(letters, func(i, j int) bool {
 			return letters[i] < letters[j]
-		})*/
+		})
 
 		for _, letter := range letters {
 			if currentNode.Children == nil {
 				currentNode.Children = make(map[string]*DictNode, 26)
+			}
+
+			if currentNode.Words == nil {
 				currentNode.Words = make([]string, 0)
 			}
 
@@ -104,6 +110,7 @@ func splice(array []string, index int) []string {
 }
 
 func (dict *DictNode) getCandidates(letters []string) []string {
+	lookups += 1
 	candidates := dict.Words
 	//fmt.Println("checking letters: ", dict.Words, letters)
 
@@ -190,11 +197,100 @@ func applyFlags(words []string) []string {
 	return filtered
 }
 
+/*
+Interactions
+> set jbhwokd # sets available letters
+> -xx 				# applies suffix -xx
+> xx-					# applies prefix xx-
+> -xx-				# finds words with xx in the middle
+> 3						# lists words that are 3 letters long
+> 3 x-				# lists words that are 3 letters long that start with x
+> help				# shows this!
+*/
+
+func applyFilter(words []string, filter string) []string {
+	filtered := make([]string, 0)
+	filterText := strings.ReplaceAll(filter, "-", "")
+
+	// fmt.Println("raw words: ", words)
+
+	for _, word := range words {
+		matches := word != filterText
+		if strings.HasPrefix(filter, "-") && strings.HasSuffix(filter, "-") {
+			matches = matches && strings.Contains(word, filterText)
+		} else if strings.HasPrefix(filter, "-") {
+			matches = matches && strings.HasSuffix(word, filterText)
+		} else if strings.HasSuffix(filter, "-") {
+			matches = matches && strings.HasPrefix(word, filterText)
+		}
+
+		if matches {
+			filtered = append(filtered, word)
+		}
+	}
+
+	return filtered
+}
+
+func nav() {
+	reader := bufio.NewReader(os.Stdin)
+	node := loadDB()
+	for {
+		node.printVisit()
+		fmt.Print("> ")
+		text, _ := reader.ReadString('\n')
+		next := strings.Split(text, "")[0]
+		node = *node.Children[next]
+	}
+}
+
+func shell() {
+	reader := bufio.NewReader(os.Stdin)
+	db := loadDB()
+	fmt.Println("WWF Shell for Champs")
+	letters := ""
+
+	for {
+		lookups = 0
+		filter := ""
+		fmt.Print("> ")
+		text, _ := reader.ReadString('\n')
+		text = strings.Replace(text, "\n", "", -1)
+		tokenized := strings.Split(text, " ")
+
+		if tokenized[0] == "set" {
+			letters = tokenized[1]
+		} else {
+			filter = text
+		}
+
+		// splitLetters := strings.Split(letters+suffix+prefix, "")
+		splitLetters := strings.Split(letters+strings.ReplaceAll(filter, "-", ""), "")
+
+		//fmt.Println("splitLetters: ", splitLetters)
+		sort.SliceStable(splitLetters, func(i, j int) bool {
+			return splitLetters[i] < splitLetters[j]
+		})
+
+		candidates := sortForWWF(uniq(db.getCandidates(splitLetters)))
+		// candidates = applyFlags(candidates)
+
+		filtered := applyFilter(candidates, filter)
+		fmt.Println(len(filtered), " matches")
+		fmt.Println("looked at ", lookups, " nodes")
+		fmt.Println(filtered)
+	}
+}
+
 func main() {
+	var runShell bool
+	var explore bool
 	flag.StringVar(&prefix, "prefix", "", "prefix to find")
 	flag.StringVar(&suffix, "suffix", "", "suffix to find")
 	flag.IntVar(&length, "length", -1, "length of word")
 	flag.BoolVar(&initializeDB, "init", false, "whether or not to create db")
+	flag.BoolVar(&runShell, "shell", true, "whether to run in shell mode")
+	flag.BoolVar(&explore, "explore", false, "whether to navigate the db")
 
 	flag.Parse()
 
@@ -205,12 +301,19 @@ func main() {
 		os.Exit(0)
 	}
 
+	if explore {
+		nav()
+		os.Exit(0)
+	}
+
+	if runShell {
+		shell()
+		os.Exit(0)
+	}
+
 	letters := os.Args[len(os.Args)-1]
 
 	splitLetters := strings.Split(letters+suffix+prefix, "")
-	sort.SliceStable(splitLetters, func(i, j int) bool {
-		return splitLetters[i] < splitLetters[j]
-	})
 
 	db := loadDB()
 

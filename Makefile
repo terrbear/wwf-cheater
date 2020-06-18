@@ -1,5 +1,9 @@
 .PHONY: clean build
 
+init:
+	rm words.db
+	go run main.go -init
+
 build:
 	mkdir -p bin
 	go build -o ./bin/wwf main.go
